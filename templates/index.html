@@ -19,7 +19,11 @@
     --danger: #f87171;
     --radius: 14px;
   }
-  * { box-sizing: border-box; }
+  body.light {
+    --bg: #f4f6fb; --panel: #ffffff; --panel-2: #eef1f7; --border: #d6dbe6;
+    --text: #1a1d26; --muted: #5a6275; --accent: #4a6cff; --accent-2: #7c5cff;
+    --success: #22b56a; --danger: #e04a4a;
+  }
   body {
     margin: 0;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -202,7 +206,10 @@
         <div class="subtitle">Local AI Text-to-Speech · GPU accelerated</div>
       </div>
     </div>
-    <div class="badge">Device: <b>{{ device|upper }}</b></div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn btn-ghost" id="themeBtn" style="padding:6px 12px; font-size:12px;">☀️ Light</button>
+      <div class="badge">Device: <b>{{ device|upper }}</b></div>
+    </div>
   </header>
 
   <div class="hero">
@@ -449,6 +456,7 @@
   <div class="section" id="sec-history">
     <div class="card">
       <h2><span class="icon">📜</span> History</h2>
+      <input type="search" id="histSearch" placeholder="Search history..." style="margin-bottom:10px;" />
       <div class="history" id="history"></div>
       <div class="hint" id="histEmpty">No generations yet.</div>
     </div>
@@ -561,13 +569,21 @@
     }
   }
 
+  let allHistory = [];
   async function loadHistory() {
     try {
       const r = await fetch("/api/history");
       const j = await r.json();
-      const list = $("history");
-      list.innerHTML = "";
-      (j.history || []).forEach(h => {
+      allHistory = j.history || [];
+      renderHistory();
+    } catch (e) { console.error("loadHistory", e); }
+  }
+  function renderHistory() {
+    const q = ($("histSearch").value || "").toLowerCase();
+    const list = $("history");
+    list.innerHTML = "";
+    const filtered = allHistory.filter(h => !q || (h.text||"").toLowerCase().includes(q));
+    filtered.forEach(h => {
         const item = document.createElement("div");
         item.className = "history-item";
         const short = (h.text || "").length > 40 ? h.text.slice(0,40) + "…" : (h.text || "");
@@ -591,8 +607,7 @@
         item.appendChild(del);
         list.appendChild(item);
       });
-      $("histEmpty").style.display = ((j.history||[]).length) ? "none" : "block";
-    } catch (e) { console.error("loadHistory", e); }
+    $("histEmpty").style.display = (filtered.length) ? "none" : "block";
   }
 
   async function loadVoices() {
@@ -720,9 +735,16 @@
       $("statVoices").textContent = j.voices;
     } catch(e) { console.error("loadInfo", e); }
   }
-  loadInfo();
-  setTimeout(loadInfo, 1000);
-  $("favOnly").addEventListener("change", loadVoices);
+  // Theme toggle
+  const themeBtn = $("themeBtn");
+  function applyTheme(t) {
+    document.body.classList.toggle("light", t === "light");
+    themeBtn.textContent = t === "light" ? "🌙 Dark" : "☀️ Light";
+    localStorage.setItem("theme", t);
+  }
+  applyTheme(localStorage.getItem("theme") || "dark");
+  themeBtn.addEventListener("click", () => applyTheme(document.body.classList.contains("light") ? "dark" : "light"));
+  $("histSearch").addEventListener("input", renderHistory);
 
   // Voice library upload
   // (change handler already registered above)
