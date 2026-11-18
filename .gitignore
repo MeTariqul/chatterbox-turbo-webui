@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Models (large weights)
+models/
+
+# Generated audio
+static/outputs/
+!static/outputs/.gitkeep
+
+# User data
+favorites.json
+history.json
+
+# Temp / logs
+*.log
+probe*.txt
+probe*.py
+download_xtts.py
+xtts_*.log
+xtts_*.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Shortcut
+*.lnk

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChatterBox Turbo — Web UI</title>
+<link rel="icon" href="/static/logo.png" />
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --panel-2: #222633;
+    --border: #2e3345;
+    --text: #e6e8ef;
+    --muted: #8b90a3;
+    --accent: #6c8cff;
+    --accent-2: #a78bfa;
+    --success: #34d399;
+    --danger: #f87171;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #0a0e1a 0%, #141828 50%, #1a1030 100%);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: radial-gradient(800px 400px at 10% 0%, rgba(108,140,255,.18), transparent),
+                radial-gradient(600px 300px at 90% 20%, rgba(167,139,250,.15), transparent);
+    animation: bgFloat 12s ease-in-out infinite alternate;
+  }
+  @keyframes bgFloat { from { transform: translate(0,0); } to { transform: translate(30px, 20px); } }
+  .container { max-width: 1180px; margin: 0 auto; padding: 16px 16px 40px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 56px; height: 56px; border-radius: 12px;
+    object-fit: contain; background: transparent;
+    box-shadow: 0 4px 12px rgba(108,140,255,.35);
+    transition: transform .2s ease;
+  }
+  .logo:hover { transform: scale(1.05); }
+  h1 { margin: 0; font-size: 22px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .badge {
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; color: var(--muted);
+  }
+  .hero {
+    display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .hero-stat {
+    background: rgba(26,29,39,.6); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 20px; min-width: 110px;
+    backdrop-filter: blur(8px);
+  }
+  .hero-num { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .hero-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 6px; margin-bottom: 20px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 6px;
+    width: fit-content;
+  }
+  .tab {
+    background: transparent; border: none; color: var(--muted);
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-weight: 600; font-size: 12px;
+    transition: .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent); color: #fff; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .grid {
+    display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px;
+  }
+  .grid > div:last-child { position: sticky; top: 20px; align-self: start; }
+
+  .card {
+    background: rgba(26, 29, 39, .75); border: 1px solid rgba(46, 51, 69, .6);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius); padding: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+  }
+  .card:hover { border-color: #4a5080; transform: translateY(-2px); }
+  .card h2 { margin: 0 0 14px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .icon { font-size: 18px; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  textarea, input[type="text"], input[type="number"], select {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 14px;
+    font-family: inherit; resize: vertical;
+  }
+  textarea { min-height: 120px; line-height: 1.5; }
+  textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+  .slider-group { margin-bottom: 16px; }
+  .slider-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .slider-head .val { color: var(--accent); font-weight: 600; font-size: 13px; }
+  input[type="range"] {
+    width: 100%; accent-color: var(--accent); height: 6px; cursor: pointer;
+  }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .upload-box {
+    border: 2px dashed var(--border); border-radius: 12px; padding: 18px;
+    text-align: center; cursor: pointer; transition: .2s; background: var(--panel-2);
+  }
+  .upload-box:hover { border-color: var(--accent); }
+  .upload-box.has-file { border-color: var(--success); border-style: solid; }
+  .upload-box input { display: none; }
+  .upload-box .fname { margin-top: 8px; font-size: 12px; color: var(--success); word-break: break-all; }
+
+  .btn {
+    border: none; cursor: pointer; font-family: inherit; font-weight: 600;
+    border-radius: 10px; padding: 10px 16px; font-size: 13px;
+    transition: .15s transform, .15s box-shadow, .15s opacity;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; width: 100%;
+    box-shadow: 0 6px 20px rgba(108,140,255,.35);
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(108,140,255,.45); }
+  .btn-ghost {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); }
+
+  .player-card { margin-top: 16px; }
+  audio { width: 100%; border-radius: 10px; }
+  .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .meta a { color: var(--accent); text-decoration: none; }
+
+  .status {
+    margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.info { background: rgba(108,140,255,.12); color: var(--accent); border: 1px solid rgba(108,140,255,.3); }
+  .status.success { background: rgba(52,211,153,.12); color: var(--success); border: 1px solid rgba(52,211,153,.3); }
+  .status.error { background: rgba(248,113,113,.12); color: var(--danger); border: 1px solid rgba(248,113,113,.3); }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .preset {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  }
+  .preset:hover { color: var(--text); border-color: var(--accent); }
+
+  .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 30px; }
+
+  .history { max-height: 400px; overflow-y: auto; }
+  .history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px; background: var(--panel-2); gap: 8px;
+  }
+  .history-item .txt { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
+  .history-item audio { width: 160px; height: 30px; }
+
+  details.card summary { list-style: none; cursor: pointer; }
+  details.card summary::-webkit-details-marker { display: none; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--panel); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="brand">
+      <img class="logo" src="/static/logo.png" alt="ChatterBox" />
+      <div>
+        <h1>ChatterBox Turbo</h1>
+        <div class="subtitle">Local AI Text-to-Speech · GPU accelerated</div>
+      </div>
+    </div>
+    <div class="badge">Device: <b>{{ device|upper }}</b></div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-stat"><div class="hero-num" id="statVoices">{{ voice_count }}</div><div class="hero-lbl">Voices</div></div>
+    <div class="hero-stat"><div class="hero-num">350M</div><div class="hero-lbl">Params</div></div>
+    <div class="hero-stat"><div class="hero-num">24kHz</div><div class="hero-lbl">Sample Rate</div></div>
+    <div class="hero-stat"><div class="hero-num">19</div><div class="hero-lbl">Emotion Tags</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-sec="generate">🎯 Generate</button>
+    <button class="tab" data-sec="voices">🎙️ Voice Library</button>
+    <button class="tab" data-sec="history">📜 History</button>
+  </div>
+
+  <!-- GENERATE -->
+  <div class="section active" id="sec-generate">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2><span class="icon">📝</span> Text to Speech</h2>
+          <label for="text">Input Text</label>
+          <textarea id="text" placeholder="Type or paste text here... Use paralinguistic tags like [laugh], [chuckle], [sigh]."></textarea>
+          <div class="hint">Tip: tags like [laugh], [chuckle], [cough], [sigh] add expression. Use &lt;break time="0.4s" /&gt; for pauses.</div>
+
+          <div style="margin-top:14px;">
+            <label for="emotionSel">Emotion</label>
+            <select id="emotionSel">
+            <option value="">None (neutral)</option>
+            <option value="[happy]">Happy</option>
+            <option value="[crying]">Sad / Crying</option>
+            <option value="[angry]">Angry</option>
+            <option value="[fear]">Fearful</option>
+            <option value="[surprised]">Surprised</option>
+            <option value="[dramatic]">Dramatic</option>
+            <option value="[sarcastic]">Sarcastic</option>
+            <option value="[whispering]">Whispering</option>
+            <option value="[narration]">Narration</option>
+            <option value="[happy] [laugh]">Excited</option>
+            <option value="[crying] [sigh]">Heartbroken</option>
+            <option value="[angry] [groan]">Furious</option>
+            <option value="[fear] [gasp]">Terrified</option>
+            <option value="[happy] [chuckle]">Cheerful</option>
+            <option value="[crying] [sigh]">Melancholic</option>
+            <option value="[dramatic] [whispering]">Suspense</option>
+            <option value="[sarcastic] [laugh]">Mocking</option>
+            <option value="[surprised] [gasp]">Shocked</option>
+            <option value="[happy] [advertisement]">Promotional</option>
+            <option value="[narration] [dramatic]">Epic Story</option>
+            <option value="[whispering] [sigh]">Secretive</option>
+            <option value="[angry] [cough]">Irritated</option>
+            <option value="[happy] [gasp]">Delighted</option>
+            <option value="[crying] [whispering]">Grieving</option>
+            </select>
+            <div class="hint">Only the 19 supported tags work (see Emotion Tags). Compound emotions combine them.</div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label>Voice Clone (optional reference audio)</label>
+            <div class="upload-box" id="uploadBox">
+              <div>Click or drop a WAV/MP3 reference clip (5–15s)</div>
+              <div class="fname" id="fname"></div>
+              <input type="file" id="audio" accept="audio/*" />
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label for="voiceSelect">Voice (from library)</label>
+            <select id="voiceSelect">
+              <option value="">Default (built-in)</option>
+            </select>
+            <div class="hint">Choose a saved voice, or upload a reference clip above (overrides). Favorites shown first.</div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label for="format">Output Format</label>
+            <select id="format">
+              <option value="wav">WAV</option>
+              <option value="mp3">MP3</option>
+            </select>
+          </div>
+
+          <div style="margin-top:14px;">
+            <label for="lang">Language</label>
+            <select id="lang">
+              <option value="en">English (ChatterBox Turbo)</option>
+              <option value="bn">Bengali / বাংলা (Meta MMS-TTS)</option>
+            </select>
+            <div class="hint">Bengali uses the local Meta MMS-TTS bn_BD model (fully offline).</div>
+          </div>
+
+          <button class="btn btn-primary" id="genBtn" style="margin-top:18px;">Generate Speech</button>
+
+          <div id="progressWrap" style="display:none; margin-top:12px;">
+            <div style="background:var(--panel-2); border-radius:999px; overflow:hidden; height:8px;">
+              <div id="progressBar" style="height:100%; width:0%; background:linear-gradient(135deg,var(--accent),var(--accent-2)); transition:width .2s;"></div>
+            </div>
+            <div id="progressText" style="font-size:12px; color:var(--muted); margin-top:4px;">0%</div>
+          </div>
+
+          <div class="status" id="status"></div>
+
+          <div class="player-card" id="playerCard" style="display:none;">
+            <label>Output</label>
+            <audio id="player" controls></audio>
+          <canvas id="waveform" width="600" height="60" style="width:100%; height:60px; margin-top:8px; border-radius:8px; background:var(--panel-2);"></canvas>
+            <div class="meta">
+              <span id="dur"></span>
+              <a id="dl" download>Download</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="icon">🎭</span> Emotion Tags</h2>
+          <div class="presets" id="tagChips"></div>
+          <div class="hint">Click a tag to insert at cursor. Combine freely.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2><span class="icon">ℹ️</span> System</h2>
+          <div style="font-size:13px; color:var(--muted); line-height:1.6;">
+            <div>Device: <b id="sysDevice">{{ device.upper() }}</b></div>
+            <div>Model: <b id="sysModel">{{ model_name }}</b></div>
+            <div>Sample rate: <b id="sysSr">{{ sample_rate }}</b> Hz</div>
+            <div>Voices: <b id="sysVoices">{{ voice_count }}</b></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="icon">🎛️</span> Voice Controls (ElevenLabs-style)</h2>
+
+          <div class="slider-group">
+            <div class="slider-head"><label>Stability</label><span class="val" id="v_stab">0.50</span></div>
+            <input type="range" id="stability" min="0" max="1" step="0.01" value="0.5" />
+            <div class="hint">Higher = more consistent, less variation.</div>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head"><label>Similarity Boost</label><span class="val" id="v_sim">0.50</span></div>
+            <input type="range" id="similarity_boost" min="0" max="1" step="0.01" value="0.5" />
+            <div class="hint">How closely to match the reference voice.</div>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head"><label>Style</label><span class="val" id="v_style">0.00</span></div>
+            <input type="range" id="style" min="0" max="1" step="0.01" value="0" />
+            <div class="hint">Exaggeration of speaking style.</div>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head"><label>Speed</label><span class="val" id="v_speed">1.00</span></div>
+            <input type="range" id="speed" min="0.5" max="2" step="0.01" value="1.0" />
+            <div class="hint">Playback speed (0.5x - 2x).</div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label><input type="checkbox" id="speaker_boost" checked /> Speaker Boost (normalize loudness)</label>
+          </div>
+        </div>
+
+        <details class="card">
+          <summary style="cursor:pointer; font-weight:600;">Advanced (Turbo params)</summary>
+          <div style="margin-top:14px;">
+            <div class="slider-group">
+              <div class="slider-head"><label>Temperature</label><span class="val" id="v_temp">0.00</span></div>
+              <input type="range" id="temperature" min="0" max="1.5" step="0.01" value="0" />
+              <div class="hint">0 = auto from Stability/Style.</div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head"><label>Repetition Penalty</label><span class="val" id="v_rep">0.00</span></div>
+              <input type="range" id="repetition_penalty" min="0" max="2" step="0.01" value="0" />
+              <div class="hint">0 = auto.</div>
+            </div>
+
+            <div class="row">
+              <div class="slider-group">
+                <div class="slider-head"><label>Top P</label><span class="val" id="v_topp">0.00</span></div>
+                <input type="range" id="top_p" min="0" max="1" step="0.01" value="0" />
+              </div>
+              <div class="slider-group">
+                <div class="slider-head"><label>Top K</label><span class="val" id="v_topk">0</span></div>
+                <input type="range" id="top_k" min="0" max="1000" step="1" value="0" />
+              </div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head"><label>Max Duration (sec)</label><span class="val" id="v_maxd">0</span></div>
+              <input type="range" id="max_duration" min="0" max="300" step="1" value="0" />
+              <div class="hint">0 = no limit. Speeds up to fit.</div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head"><label>Min P</label><span class="val" id="v_minp">0.00</span></div>
+              <input type="range" id="min_p" min="0" max="1" step="0.01" value="0" />
+              <div class="hint">0 = auto/off.</div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head"><label>Exaggeration</label><span class="val" id="v_exag">0.00</span></div>
+              <input type="range" id="exaggeration" min="0" max="1" step="0.01" value="0" />
+              <div class="hint">Expressiveness (0 = auto).</div>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head"><label>CFG Weight</label><span class="val" id="v_cfg">0.00</span></div>
+              <input type="range" id="cfg_weight" min="0" max="1" step="0.01" value="0" />
+              <div class="hint">Classifier-free guidance (0 = off).</div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <button class="btn btn-ghost" id="resetBtn" style="width:100%;">Reset to Defaults</button>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE LIBRARY -->
+  <div class="section" id="sec-voices">
+    <div class="card">
+      <h2><span class="icon">🎙️</span> Voice Library</h2>
+      <div style="margin-bottom:12px;">
+        <input type="text" id="voiceName" placeholder="New voice name" />
+      </div>
+      <div class="upload-box" id="vUploadBox" style="margin-bottom:10px;">
+        <div>Click or drop a reference clip to save</div>
+        <div class="fname" id="vfname"></div>
+        <input type="file" id="vAudio" accept="audio/*" multiple />
+      </div>
+      <button class="btn btn-ghost" id="saveVoiceBtn" style="width:100%; margin-bottom:12px;">Save Voice</button>
+      <div style="margin-bottom:8px;">
+        <label><input type="checkbox" id="favOnly" /> Show favorites only</label>
+      </div>
+      <div class="history" id="voiceList"></div>
+      <div class="hint" id="voiceEmpty">No saved voices yet.</div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="section" id="sec-history">
+    <div class="card">
+      <h2><span class="icon">📜</span> History</h2>
+      <div class="history" id="history"></div>
+      <div class="hint" id="histEmpty">No generations yet.</div>
+    </div>
+  </div>
+
+  <div class="footer">ChatterBox Web UI · Local inference · MIT License</div>
+</div>
+
+<script>
+  window.addEventListener("error", (e) => { try { status("Error: " + (e.message || "Unknown"), "error"); } catch(_) {} });
+  const $ = (id) => document.getElementById(id);
+  function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  const status = (msg, type="info") => {
+    const el = $("status");
+    el.className = "status show " + type;
+    el.innerHTML = msg;
+  };
+  const hideStatus = () => { $("status").className = "status"; };
+
+  // Tabs
+   document.querySelectorAll(".tab").forEach(t => {
+     t.addEventListener("click", () => {
+       document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+       t.classList.add("active");
+       document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+       $("sec-" + t.dataset.sec).classList.add("active");
+       if (t.dataset.sec === "voices") loadVoices();
+     });
+   });
+
+  const sliders = [
+    ["stability","v_stab",2],
+    ["similarity_boost","v_sim",2],
+    ["style","v_style",2],
+    ["speed","v_speed",2],
+    ["temperature","v_temp",2],
+    ["repetition_penalty","v_rep",2],
+    ["top_p","v_topp",2],
+    ["top_k","v_topk",0],
+    ["max_duration","v_maxd",0],
+    ["min_p","v_minp",2],
+    ["exaggeration","v_exag",2],
+    ["cfg_weight","v_cfg",2],
+  ];
+  sliders.forEach(([id, vid, dec]) => {
+    const el = $(id);
+    const show = () => $(vid).textContent = parseFloat(el.value).toFixed(dec);
+    el.addEventListener("input", show);
+    show();
+  });
+
+  document.querySelectorAll(".preset").forEach(p => {
+    p.addEventListener("click", () => { $("text").value = p.dataset.text; });
+  });
+
+  const box = $("uploadBox");
+  const audioInput = $("audio");
+  box.addEventListener("click", () => audioInput.click());
+  box.addEventListener("dragover", e => { e.preventDefault(); box.style.borderColor = "var(--accent)"; });
+  box.addEventListener("dragleave", () => { box.style.borderColor = ""; });
+  box.addEventListener("drop", e => {
+    e.preventDefault(); box.style.borderColor = "";
+    if (e.dataTransfer.files.length) { audioInput.files = e.dataTransfer.files; updateFile(); }
+  });
+  audioInput.addEventListener("change", updateFile);
+  function updateFile() {
+    const f = audioInput.files[0];
+    if (f) { box.classList.add("has-file"); $("fname").textContent = f.name + " (" + (f.size/1024).toFixed(1) + " KB)"; }
+    else { box.classList.remove("has-file"); $("fname").textContent = ""; }
+  }
+
+  const vBox = $("vUploadBox");
+  const vAudio = $("vAudio");
+  vBox.addEventListener("click", () => vAudio.click());
+  vAudio.addEventListener("change", () => {
+    const f = vAudio.files[0];
+    if (f) { vBox.classList.add("has-file"); $("vfname").textContent = f.name; }
+    else { vBox.classList.remove("has-file"); $("vfname").textContent = ""; }
+  });
+
+  // Emotion tag chips
+  const TAGS = ["[advertisement]","[angry]","[chuckle]","[clear throat]","[cough]","[crying]","[dramatic]","[fear]","[gasp]","[groan]","[happy]","[laugh]","[narration]","[sarcastic]","[shush]","[sigh]","[sniff]","[surprised]","[whispering]","[happy] [laugh]","[crying] [sigh]","[angry] [groan]","[fear] [gasp]","[happy] [chuckle]","[dramatic] [whispering]","[sarcastic] [laugh]","[surprised] [gasp]","[happy] [advertisement]","[narration] [dramatic]"];
+  const chips = $("tagChips");
+  TAGS.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "preset"; b.textContent = t;
+    b.addEventListener("click", () => {
+      const ta = $("text");
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = ta.value.slice(0, start) + t + " " + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + t.length + 1;
+      ta.focus();
+    });
+    chips.appendChild(b);
+  });
+
+  // Ratings
+  function getRatings() { try { return JSON.parse(localStorage.getItem("cb_voice_ratings") || "{}"); } catch { return {}; } }
+  function setRatings(v) { localStorage.setItem("cb_voice_ratings", JSON.stringify(v)); }
+
+  async function getFavs() {
+    try { const r = await fetch("/api/favorites"); const j = await r.json(); return j.favorites || []; }
+    catch { return []; }
+  }
+  async function toggleFav(name, add) {
+    if (add) {
+      await fetch("/api/favorites", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "name=" + encodeURIComponent(name) });
+    } else {
+      await fetch("/api/favorites/" + encodeURIComponent(name), { method: "DELETE" });
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const r = await fetch("/api/history");
+      const j = await r.json();
+      const list = $("history");
+      list.innerHTML = "";
+      (j.history || []).forEach(h => {
+        const item = document.createElement("div");
+        item.className = "history-item";
+        const short = (h.text || "").length > 40 ? h.text.slice(0,40) + "…" : (h.text || "");
+        const sizeStr = h.size ? (h.size < 1024*1024 ? (h.size/1024).toFixed(1) + " KB" : (h.size/1024/1024).toFixed(2) + " MB") : "";
+        item.innerHTML = `<div style="flex:1; min-width:0;">
+          <div class="txt">${escapeHtml(short)}</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+            ${escapeHtml(h.created_str || "")} · ${h.duration || 0}s · ${sizeStr} · ${(h.format || "").toUpperCase()}
+          </div>
+        </div>`;
+        const a = document.createElement("audio");
+        a.controls = true; a.src = h.audio_url;
+        a.style.width = "160px";
+        item.appendChild(a);
+        const del = document.createElement("button");
+        del.className = "btn btn-ghost"; del.textContent = "✕"; del.style.padding = "4px 8px"; del.style.fontSize = "12px";
+        del.addEventListener("click", async () => {
+          await fetch("/api/history/" + encodeURIComponent(h.id), { method: "DELETE" });
+          loadHistory();
+        });
+        item.appendChild(del);
+        list.appendChild(item);
+      });
+      $("histEmpty").style.display = ((j.history||[]).length) ? "none" : "block";
+    } catch (e) { console.error("loadHistory", e); }
+  }
+
+  async function loadVoices() {
+    console.log("loadVoices start");
+    try {
+      const res = await fetch("/api/voices");
+      const j = await res.json();
+      const favs = await getFavs();
+      const ratings = getRatings();
+      let voices = (j.voices || []).slice();
+      if ($("favOnly").checked) voices = voices.filter(v => favs.includes(v.name));
+      voices.sort((a, b) => {
+        const af = favs.includes(a.name) ? 0 : 1;
+        const bf = favs.includes(b.name) ? 0 : 1;
+        if (af !== bf) return af - bf;
+        const ra = ratings[a.name] || 0, rb = ratings[b.name] || 0;
+        if (ra !== rb) return rb - ra;
+        return a.name.localeCompare(b.name);
+      });
+      const sel = $("voiceSelect");
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Default (built-in)</option>';
+      const list = $("voiceList");
+      list.innerHTML = "";
+      voices.forEach(v => {
+        const isFav = favs.includes(v.name);
+        const rating = ratings[v.name] || 0;
+        const opt = document.createElement("option");
+        opt.value = v.name; opt.textContent = (isFav ? "★ " : "") + v.name + " (" + (v.samples||1) + " sample" + ((v.samples||1)>1?"s":"") + ")" + (rating ? " · " + rating + "★" : "");
+        sel.appendChild(opt.cloneNode(true));
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `<span class="txt">${isFav ? "★ " : ""}${escapeHtml(v.name)} <small style="color:var(--muted)">(${v.samples||1} sample${(v.samples||1)>1?'s':''})</small> ${"★".repeat(rating)}${"☆".repeat(5-rating)}</span>`;
+        const play = document.createElement("audio");
+        play.controls = true; play.src = v.url; play.style.width = "110px";
+        item.appendChild(play);
+        item.style.flexWrap = "wrap";
+        const samplesBtn = document.createElement("button");
+        samplesBtn.className = "btn btn-ghost"; samplesBtn.textContent = "Samples"; samplesBtn.style.padding = "4px 8px"; samplesBtn.style.fontSize = "12px";
+        const samplesDiv = document.createElement("div");
+        samplesDiv.style.display = "none"; samplesDiv.style.width = "100%"; samplesDiv.style.marginTop = "6px";
+        samplesBtn.addEventListener("click", () => {
+          if (samplesDiv.style.display === "none") {
+            samplesDiv.style.display = "block";
+            samplesDiv.innerHTML = "";
+            (v.sample_urls || []).forEach(url => {
+              const row = document.createElement("div");
+              row.style.display = "flex"; row.style.alignItems = "center"; row.style.gap = "6px"; row.style.marginBottom = "4px";
+              const fname = url.split("/").pop();
+              const lbl = document.createElement("span"); lbl.textContent = fname; lbl.style.fontSize = "11px"; lbl.style.color = "var(--muted)"; lbl.style.flex = "1"; lbl.style.overflow = "hidden"; lbl.style.textOverflow = "ellipsis";
+              row.appendChild(lbl);
+              const playS = document.createElement("audio"); playS.controls = true; playS.src = url; playS.style.width = "90px"; playS.style.height = "24px"; row.appendChild(playS);
+              const delS = document.createElement("button"); delS.className = "btn btn-ghost"; delS.textContent = "✕"; delS.style.padding = "2px 6px"; delS.style.fontSize = "11px";
+              delS.addEventListener("click", async () => {
+                await fetch("/api/voices/" + encodeURIComponent(v.name) + "/samples/" + encodeURIComponent(fname), { method: "DELETE" });
+                loadVoices();
+              });
+              row.appendChild(delS);
+              samplesDiv.appendChild(row);
+            });
+            if (!(v.sample_urls || []).length) samplesDiv.textContent = "No samples";
+          } else {
+            samplesDiv.style.display = "none";
+          }
+        });
+        item.appendChild(samplesBtn);
+        item.appendChild(samplesDiv);
+
+        const addBtn = document.createElement("button");
+        addBtn.className = "btn btn-ghost"; addBtn.textContent = "Add"; addBtn.style.padding = "4px 8px"; addBtn.style.fontSize = "12px";
+        addBtn.title = "Add more samples to this voice";
+        addBtn.addEventListener("click", () => {
+          $("voiceName").value = v.name;
+          vAudio.click();
+        });
+        item.appendChild(addBtn);
+        const rateWrap = document.createElement("span");
+        rateWrap.style.display = "inline-flex"; rateWrap.style.gap = "2px";
+        for (let i = 1; i <= 5; i++) {
+          const s = document.createElement("button");
+          s.className = "btn btn-ghost"; s.textContent = i <= rating ? "★" : "☆";
+          s.style.padding = "2px 4px"; s.style.fontSize = "12px";
+          s.addEventListener("click", () => {
+            const r = getRatings();
+            r[v.name] = (r[v.name] === i) ? 0 : i;
+            setRatings(r);
+  loadVoices();
+  loadHistory();
+          });
+          rateWrap.appendChild(s);
+        }
+        item.appendChild(rateWrap);
+        const favBtn = document.createElement("button");
+        favBtn.className = "btn btn-ghost"; favBtn.textContent = isFav ? "★" : "☆"; favBtn.style.padding = "4px 8px"; favBtn.style.fontSize = "14px";
+        favBtn.title = "Toggle favorite";
+        favBtn.addEventListener("click", async () => {
+          await toggleFav(v.name, !isFav);
+          loadVoices();
+        });
+        item.appendChild(favBtn);
+        const del = document.createElement("button");
+        del.className = "btn btn-ghost"; del.textContent = "✕"; del.style.padding = "4px 8px"; del.style.fontSize = "12px";
+        del.addEventListener("click", async () => {
+          await fetch("/api/voices/" + encodeURIComponent(v.name), { method: "DELETE" });
+          await toggleFav(v.name, false);
+          const r = getRatings(); delete r[v.name]; setRatings(r);
+          loadVoices();
+        });
+        item.appendChild(del);
+        list.appendChild(item);
+      });
+      if (cur) sel.value = cur;
+      $("voiceEmpty").style.display = (voices.length) ? "none" : "block";
+      console.log("loadVoices done", voices.length);
+    } catch (e) { console.error("loadVoices", e); status("Error loading voices: " + e.message, "error"); }
+  }
+  loadVoices();
+  async function loadInfo() {
+    try {
+      const r = await fetch("/api/info"); const j = await r.json();
+      $("sysDevice").textContent = j.device.toUpperCase();
+      $("sysModel").textContent = j.model;
+      $("sysSr").textContent = j.sample_rate;
+      $("sysVoices").textContent = j.voices;
+      $("statVoices").textContent = j.voices;
+    } catch(e) { console.error("loadInfo", e); }
+  }
+  loadInfo();
+  setTimeout(loadInfo, 1000);
+  $("favOnly").addEventListener("change", loadVoices);
+
+  // Voice library upload
+  // (change handler already registered above)
+
+  $("saveVoiceBtn").addEventListener("click", async () => {
+    const name = $("voiceName").value.trim();
+    if (!name) { status("Enter a voice name.", "error"); return; }
+    if (!vAudio.files[0]) { status("Select an audio file to save.", "error"); return; }
+     const fd = new FormData();
+     fd.append("name", name);
+     for (const f of vAudio.files) fd.append("audio", f);
+    try {
+      const res = await fetch("/api/voices/save", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error || "Save failed");
+      status("Voice saved: " + j.voice.name, "success");
+      $("voiceName").value = "";
+      vAudio.value = "";
+      vBox.classList.remove("has-file"); $("vfname").textContent = "";
+      loadVoices();
+    } catch (e) { status("Error: " + e.message, "error"); }
+  });
+
+  $("resetBtn").addEventListener("click", () => {
+    $("stability").value = 0.5; $("similarity_boost").value = 0.5;
+    $("style").value = 0; $("speed").value = 1.0;
+    $("speaker_boost").checked = true;
+     $("temperature").value = 0; $("repetition_penalty").value = 0;
+     $("top_p").value = 0; $("top_k").value = 0;
+     $("max_duration").value = 0;
+     $("min_p").value = 0; $("exaggeration").value = 0; $("cfg_weight").value = 0;
+    sliders.forEach(([id, vid, dec]) => {
+      const el = $(id); $(vid).textContent = parseFloat(el.value).toFixed(dec);
+    });
+  });
+
+  $("genBtn").addEventListener("click", async () => {
+    const emotion = $("emotionSel").value;
+    let text = $("text").value.trim();
+    if (emotion) text = emotion + " " + text;
+    if (!text) { status("Please enter some text.", "error"); return; }
+    const btn = $("genBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generating...';
+    hideStatus();
+    const fd = new FormData();
+    fd.append("text", text);
+    fd.append("stability", $("stability").value);
+    fd.append("similarity_boost", $("similarity_boost").value);
+    fd.append("style", $("style").value);
+    fd.append("speed", $("speed").value);
+    fd.append("speaker_boost", $("speaker_boost").checked ? "true" : "false");
+    fd.append("temperature", $("temperature").value);
+    fd.append("repetition_penalty", $("repetition_penalty").value);
+     fd.append("top_p", $("top_p").value);
+      fd.append("top_k", $("top_k").value);
+      fd.append("max_duration", $("max_duration").value);
+     fd.append("min_p", $("min_p").value);
+     fd.append("exaggeration", $("exaggeration").value);
+     fd.append("cfg_weight", $("cfg_weight").value);
+     fd.append("format", $("format").value);
+     fd.append("lang", $("lang").value);
+     const vn = $("voiceSelect").value;
+     fd.append("voice_name", vn);
+     if (audioInput.files[0]) fd.append("audio", audioInput.files[0]);
+
+     const progressWrap = $("progressWrap");
+     const progressBar = $("progressBar");
+     const progressText = $("progressText");
+     progressWrap.style.display = "block";
+     progressBar.style.width = "0%";
+     progressText.textContent = "0%";
+
+     try {
+       const res = await fetch("/generate", { method: "POST", body: fd });
+       if (!res.ok) throw new Error("Generation failed");
+       const reader = res.body.getReader();
+       const decoder = new TextDecoder();
+       let buffer = "";
+       let j = null;
+       while (true) {
+         const { done, value } = await reader.read();
+         if (done) break;
+         buffer += decoder.decode(value, { stream: true });
+         const parts = buffer.split("\n\n");
+         buffer = parts.pop();
+         for (const part of parts) {
+           const line = part.trim();
+           if (!line.startsWith("data:")) continue;
+           const payload = JSON.parse(line.slice(5).trim());
+           if (payload.type === "progress") {
+             const pct = Math.round((payload.progress / payload.total) * 100);
+             progressBar.style.width = pct + "%";
+             progressText.textContent = pct + "% (" + payload.progress + "/" + payload.total + ")";
+           } else if (payload.type === "error") {
+             throw new Error(payload.error || "Generation failed");
+           } else if (payload.type === "done") {
+             j = payload;
+           }
+         }
+       }
+       if (!j) throw new Error("No result");
+       progressBar.style.width = "100%";
+       progressText.textContent = "100%";
+       const player = $("player");
+       player.src = j.audio_url + "?t=" + Date.now();
+       $("playerCard").style.display = "block";
+       $("dur").textContent = "Duration: " + j.duration + "s · " + j.sr + " Hz";
+       $("dl").href = j.audio_url;
+       drawWaveform(j.audio_url);
+       if (j.required_speed && j.required_speed > 1) {
+         status("Generated (sped up " + j.required_speed + "x to fit " + j.max_duration + "s).", "success");
+       } else {
+         status("Generated successfully.", "success");
+       }
+        loadHistory();
+     } catch (e) {
+       status("Error: " + e.message, "error");
+     } finally {
+       btn.disabled = false;
+       btn.textContent = "Generate Speech";
+     }
+   });
+
+  function drawWaveform(url) {
+    const canvas = $("waveform");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    fetch(url).then(r => r.arrayBuffer()).then(buf => {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx.decodeAudioData(buf);
+    }).then(audioBuf => {
+      const data = audioBuf.getChannelData(0);
+      const step = Math.ceil(data.length / canvas.width);
+      const amp = canvas.height / 2;
+      ctx.fillStyle = "rgba(108,140,255,.15)";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle = "var(--accent)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < canvas.width; i++) {
+        let min = 1, max = -1;
+        for (let j = 0; j < step; j++) {
+          const d = data[i*step + j] || 0;
+          if (d < min) min = d;
+          if (d > max) max = d;
+        }
+        ctx.moveTo(i, (1 + min) * amp);
+        ctx.lineTo(i, (1 + max) * amp);
+      }
+      ctx.stroke();
+    }).catch(() => {});
+  }
+
+  // update stat voices count
+  const _origLoadVoices = loadVoices;
+  loadVoices = async function() { await _origLoadVoices(); try { const r = await fetch("/api/voices"); const j = await r.json(); $("statVoices").textContent = (j.voices||[]).length; } catch(e){} };
+  document.body.dataset.jsExecuted = "1";
+</script>
+</body>
+</html>
